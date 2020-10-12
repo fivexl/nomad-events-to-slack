@@ -15,7 +15,7 @@ RUN groupadd -r -g $GID app && useradd --no-log-init -r -u $UID -g app app
 
 # Copy only requirements, to cache them in docker layer
 WORKDIR /pysetup
-COPY ./app/Pipfile.lock ./app/Pipfile /pysetup/
+COPY ./Pipfile.lock ./Pipfile /pysetup/
 
 # Building system and app dependencies
 RUN set -ex \
@@ -40,8 +40,8 @@ RUN set -ex \
 	&& rm -rf /var/lib/apt/lists/*
 
 USER app
-COPY --chown=app:app ./app /app
+COPY --chown=app:app ./app.py /app
 WORKDIR /app
 
-CMD ["python", "./main.py"]
+CMD ["python", "./app.py"]
 
