@@ -1,0 +1,1 @@
+# nomad-allocations-notifier
