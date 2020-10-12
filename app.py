@@ -27,8 +27,7 @@ def consul_get(c_consul, key):
     return []
 
 
-# TODO: Def arg is mutable
-def get_alloc_events(c_nomad, sent_events_list=[], node_name_list=[], job_id_list=[], event_types_list=[]):
+def get_alloc_events(c_nomad, sent_events_list, node_name_list, job_id_list, event_types_list, event_message_filters):
     messages = []
     allocations = c_nomad.allocations.get_allocations()
     for allocation in allocations:
@@ -38,7 +37,10 @@ def get_alloc_events(c_nomad, sent_events_list=[], node_name_list=[], job_id_lis
                 (len(node_name_list) == 0 and len(job_id_list) == 0):
             for task, state in allocation["TaskStates"].items():
                 for event in state["Events"]:
-                    if event["Type"] in event_types_list or len(event_types_list) == 0:
+                    if (event["Type"] in event_types_list and event["Message"] in event_message_filters) or \
+                            (event["Type"] in event_types_list and len(event_message_filters) == 0) or \
+                            (len(event_types_list) and event["Message"] in event_message_filters) or \
+                            (len(event_types_list) == 0 and len(event_message_filters) == 0):
                         message = {
                             "Allocation ID": allocation["ID"],
                             "NodeName": allocation["NodeName"],
@@ -76,9 +78,11 @@ def main():
     node_names = str(os.getenv("NODE_NAMES", "")).split(",")
     job_ids = str(os.getenv("JOB_IDS", "")).split(",")
     event_types = str(os.getenv("EVENT_TYPES", "")).split(",")
+    event_message_filters = str(os.getenv("EVENT_MESSAGE_FILTERS", "")).split(",")
     clear_input_list(node_names)
     clear_input_list(job_ids)
     clear_input_list(event_types)
+    clear_input_list(event_message_filters)
     my_nomad = nomad.Nomad()
     my_consul = consul.Consul()
     if use_consul and len(sent_events) == 0:
@@ -88,7 +92,7 @@ def main():
             raise SystemExit("Can't get value from Consul. Consul unavailable.")
     while True:
         try:
-            events = get_alloc_events(my_nomad, sent_events, node_names, job_ids, event_types)
+            events = get_alloc_events(my_nomad, sent_events, node_names, job_ids, event_types, event_message_filters)
         except Exception as err:
             raise SystemExit("Can't get info from Nomad. Nomad unavailable.")
         for event in events:
@@ -103,8 +107,8 @@ def main():
                         consul_put(my_consul, consul_key, sent_events)
                     except Exception as err:
                         raise SystemExit("Can't put value to Consul. Consul unavailable.")
-        print("Next Check after 5 sec!")
-        time.sleep(5)
+        print("Next Check after 60 sec!")
+        time.sleep(60)
 
 
 if __name__ == "__main__":
