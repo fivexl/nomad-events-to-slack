@@ -15,16 +15,12 @@ def clear_input_list(in_list):
         in_list.remove("None")
 
 
-def consul_put(key, value):
-    # TODO: Consul is not running
-    my_consul = consul.Consul()
-    my_consul.kv.put(key, base64.urlsafe_b64encode(json.dumps(value).encode('utf-8')))
+def consul_put(c_consul, key, value):
+    return c_consul.kv.put(key, base64.urlsafe_b64encode(json.dumps(value).encode('utf-8')))
 
 
-def consul_get(key):
-    # TODO: Consul is not running
-    my_consul = consul.Consul()
-    index, data = my_consul.kv.get(key)
+def consul_get(c_consul, key):
+    index, data = c_consul.kv.get(key)
     if data:
         if data["Value"]:
             return json.loads(base64.urlsafe_b64decode(data["Value"]).decode('utf-8'))
@@ -32,11 +28,9 @@ def consul_get(key):
 
 
 # TODO: Def arg is mutable
-def get_alloc_events(sent_events_list=[], node_name_list=[], job_id_list=[], event_types_list=[]):
+def get_alloc_events(c_nomad, sent_events_list=[], node_name_list=[], job_id_list=[], event_types_list=[]):
     messages = []
-    # TODO: Nomad is not running
-    my_nomad = nomad.Nomad()
-    allocations = my_nomad.allocations.get_allocations()
+    allocations = c_nomad.allocations.get_allocations()
     for allocation in allocations:
         if (allocation["NodeName"] in node_name_list and allocation["JobID"] in job_id_list) or \
                 (allocation["NodeName"] in node_name_list and len(job_id_list) == 0) or \
@@ -77,42 +71,38 @@ def post_message_to_slack(token, channel, text, icon_url, username, blocks=None)
 
 def main():
     sent_events = []
-    # NOMAD ENV
-    print("NOMAD_ADDR:", os.environ.get("NOMAD_ADDR"))
-    print("NOMAD_NAMESPACE:", os.environ.get("NOMAD_NAMESPACE"))
-    print("NOMAD_TOKEN:", os.environ.get("NOMAD_TOKEN"))
-    print("NOMAD_REGION:", os.environ.get("NOMAD_REGION"))
-    # EVENT FILTER ENV
-    print("NODE_NAMES:", os.environ.get("NODE_NAMES"))
-    print("JOB_IDS:", os.environ.get("JOB_IDS"))
-    print("EVENT_TYPES:", os.environ.get("EVENT_TYPES"))
-    # CONSUL ENV
-    print("USE_CONSUL:", os.environ.get("USE_CONSUL"))
-    # SLACK ENV
-    print("SLACK_TOKEN:", os.environ.get("SLACK_TOKEN"))
-    print("SLACK_CHANNEL:", os.environ.get("SLACK_CHANNEL"))
-    print("SLACK_ICON_URL:", os.environ.get("SLACK_ICON_URL"))
-    print("SLACK_USERNAME:", os.environ.get("SLACK_USERNAME"))
-    node_names = str(os.environ.get("NODE_NAMES")).split(",")
-    job_ids = str(os.environ.get("JOB_IDS")).split(",")
-    event_types = str(os.environ.get("EVENT_TYPES")).split(",")
+    use_consul = bool(os.getenv("USE_CONSUL", False))
+    consul_key = str(os.getenv("CONSUL_KEY", "nomad/nomad-events-to-slack"))
+    node_names = str(os.getenv("NODE_NAMES", "")).split(",")
+    job_ids = str(os.getenv("JOB_IDS", "")).split(",")
+    event_types = str(os.getenv("EVENT_TYPES", "")).split(",")
     clear_input_list(node_names)
     clear_input_list(job_ids)
     clear_input_list(event_types)
-    use_consul = bool(os.environ.get("USE_CONSUL"))
-    use_consul = True
+    my_nomad = nomad.Nomad()
+    my_consul = consul.Consul()
     if use_consul and len(sent_events) == 0:
-        sent_events = consul_get("nomad-scan-and-notify")
+        try:
+            sent_events = consul_get(my_consul, consul_key)
+        except Exception as err:
+            raise SystemExit("Can't get value from Consul. Consul unavailable.")
     while True:
-        events = get_alloc_events(sent_events_list=sent_events, node_name_list=node_names, job_id_list=job_ids,
-                                  event_types_list=event_types)
+        try:
+            events = get_alloc_events(my_nomad, sent_events, node_names, job_ids, event_types)
+        except Exception as err:
+            raise SystemExit("Can't get info from Nomad. Nomad unavailable.")
         for event in events:
             print("Event to Send:", event)
-            # post_message_to_slack()
-            # if message to slack is OK
-            sent_events.append(event)
-            if len(sent_events) != 0:
-                consul_put("nomad-scan-and-notify", sent_events)
+            slack_result = post_message_to_slack(os.getenv("SLACK_TOKEN"), os.getenv("SLACK_CHANNEL"), event,
+                                                 os.getenv("SLACK_ICON_URL", ""),
+                                                 os.getenv("SLACK_USERNAME", "NomadEventBot"))
+            if slack_result["ok"]:
+                sent_events.append(event)
+                if use_consul and len(sent_events) != 0:
+                    try:
+                        consul_put(my_consul, consul_key, sent_events)
+                    except Exception as err:
+                        raise SystemExit("Can't put value to Consul. Consul unavailable.")
         print("Next Check after 5 sec!")
         time.sleep(5)
 

@@ -7,3 +7,7 @@ Example of Event to Send:
  'EventDisplayMessage': 'Exceeded allowed attempts 2 in interval 30m0s and mode is "fail"', 'EventDetails': 
  {'restart_reason': 'Exceeded allowed attempts 2 in interval 30m0s and mode is "fail"', 'fails_task': 'true'}}
 ```
+
+## Configure your .env
+
+`cp .env.sample .env`

@@ -8,7 +8,7 @@ ENV PIP_NO_CACHE_DIR=on \
 	PIP_DISABLE_PIP_VERSION_CHECK=on \
 	PIP_DEFAULT_TIMEOUT=100 \
 	# https://github.com/pypa/pipenv
-	PKG_PIPENV_VERSION=2020.8.13 \
+	PKG_PIPENV_VERSION=2020.8.13
 
 # Create user and group for running app
 RUN groupadd -r -g $GID app && useradd --no-log-init -r -u $UID -g app app
@@ -21,8 +21,6 @@ COPY ./Pipfile.lock ./Pipfile /pysetup/
 RUN set -ex \
 	&& savedAptMark="$(apt-mark showmanual)" \
 	&& apt-get update \
-	&& apt-get install --assume-yes --no-install-recommends --no-install-suggests \
-		wget \
 	&& pip install "pipenv==$PKG_PIPENV_VERSION" \
 	&& pipenv install --system --deploy \
 	&& apt-mark auto '.*' > /dev/null \
@@ -40,7 +38,7 @@ RUN set -ex \
 	&& rm -rf /var/lib/apt/lists/*
 
 USER app
-COPY --chown=app:app ./app.py /app
+COPY --chown=app:app ./app.py /app/
 WORKDIR /app
 
 CMD ["python", "./app.py"]
