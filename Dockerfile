@@ -7,9 +7,6 @@ ENV PIP_NO_CACHE_DIR=on \
 	# https://github.com/pypa/pipenv
 	PKG_PIPENV_VERSION=2020.8.13
 
-# Create user and group for running app
-RUN addgroup -g 1000 app && adduser -D -u 1000 -G app app
-
 # Copy only requirements, to cache them in docker layer
 WORKDIR /pysetup
 COPY ./Pipfile.lock ./Pipfile /pysetup/
@@ -20,10 +17,12 @@ RUN set -ex \
     && apk upgrade \
     && pip install "pipenv==$PKG_PIPENV_VERSION" \
     && pipenv install --system --dev --deploy \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apk/* /usr/share/man /tmp/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apk/* \
+    && rm -rf /usr/share/man \
+    && rm -rf /tmp/*
 
-USER app
-COPY --chown=app:app ./app.py /app/
+COPY ./app.py /app/
 WORKDIR /app
 
 CMD ["python", "./app.py"]
