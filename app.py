@@ -99,6 +99,8 @@ def format_event_to_slack_message(event):
 
 
 def post_message_to_slack(hook_url, message):
+    if hook_url == "":
+        return False
     headers = {"Content-type": "application/json"}
     connection = http.client.HTTPSConnection("hooks.slack.com")
     connection.request("POST", hook_url.replace("https://hooks.slack.com", ""), message, headers)
@@ -125,25 +127,26 @@ def main():
     if use_consul and len(sent_events) == 0:
         try:
             sent_events = consul_get(my_consul, consul_key)
-        except Exception as err:
+        except Exception:
             raise SystemExit("Can't get value from Consul. Consul unavailable.")
     while True:
         try:
             events = get_alloc_events(my_nomad, sent_events, node_names, job_ids, event_types, event_message_filters)
-        except Exception as err:
+        except Exception:
             raise SystemExit("Can't get info from Nomad. Nomad unavailable.")
         for event in events:
             print("Event to Send:", event)
             try:
-                slack_result = post_message_to_slack(os.getenv("SLACK_WEB_HOOK_URL"), format_event_to_slack_message(event))
-            except Exception as err:
+                slack_result = post_message_to_slack(os.getenv("SLACK_WEB_HOOK_URL"),
+                                                     format_event_to_slack_message(event))
+            except Exception:
                 raise SystemExit("Can't send message to Slack. Slack web hook url wrong.")
             if slack_result:
                 sent_events.append(event)
                 if use_consul and len(sent_events) != 0:
                     try:
                         consul_put(my_consul, consul_key, sent_events)
-                    except Exception as err:
+                    except Exception:
                         raise SystemExit("Can't put value to Consul. Consul unavailable.")
         print("Next Check after 60 sec!")
         time.sleep(60)

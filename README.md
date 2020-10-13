@@ -9,7 +9,7 @@
 ```
 
 ## How to build and run with docker
-- `cp .env.sample .env`
+- `cp env.sample .env`
 - `docker build -t nomad-events-to-slack:latest .`
 - `docker run --net="host" --env-file .env nomad-events-to-slack:latest`
 
