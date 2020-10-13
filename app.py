@@ -1,6 +1,6 @@
 import nomad
 import consul
-import requests
+import http.client
 import json
 import os
 import time
@@ -28,7 +28,7 @@ def consul_get(c_consul, key):
 
 
 def get_alloc_events(c_nomad, sent_events_list, node_name_list, job_id_list, event_types_list, event_message_filters):
-    messages = []
+    alloc_events = []
     allocations = c_nomad.allocations.get_allocations()
     for allocation in allocations:
         if (allocation["NodeName"] in node_name_list and allocation["JobID"] in job_id_list) or \
@@ -41,8 +41,8 @@ def get_alloc_events(c_nomad, sent_events_list, node_name_list, job_id_list, eve
                             (event["Type"] in event_types_list and len(event_message_filters) == 0) or \
                             (len(event_types_list) and event["Message"] in event_message_filters) or \
                             (len(event_types_list) == 0 and len(event_message_filters) == 0):
-                        message = {
-                            "Allocation ID": allocation["ID"],
+                        alloc_event = {
+                            "AllocationID": allocation["ID"],
                             "NodeName": allocation["NodeName"],
                             "JobID": allocation["JobID"],
                             "JobType": allocation["JobType"],
@@ -55,20 +55,57 @@ def get_alloc_events(c_nomad, sent_events_list, node_name_list, job_id_list, eve
                             "EventDisplayMessage": event["DisplayMessage"],
                             "EventDetails": event["Details"]
                         }
-                        messages.append(message)
-    current_messages = [m for m in messages if m not in sent_events_list]
-    return current_messages
+                        alloc_events.append(alloc_event)
+    return [evt for evt in alloc_events if evt not in sent_events_list]
 
 
-def post_message_to_slack(token, channel, text, icon_url, username, blocks=None):
-    return requests.post('https://slack.com/api/chat.postMessage', {
-        'token': token,
-        'channel': channel,
-        'text': text,
-        'icon_url': icon_url if icon_url else None,
-        'username': username if username else None,
-        'blocks': json.dumps(blocks) if blocks else None
-    }).json()
+def format_event_to_slack_message(event):
+    event_details = ""
+    for key, value in event["EventDetails"].items():
+        event_details += key + ": " + value + " "
+    message = {
+        "attachments": [{
+            "color": "#36a64f",
+            "footer": "Time: {}, AllocationID: {}".format(event["Time"], event["AllocationID"]),
+            "fields": [
+                {
+                    "title": "New Event",
+                    "value": "Task: {}\n EventType: {}".format(event["TaskName"], event["EventType"]),
+                    "short": False
+                },
+                {
+                    "title": "Task Info",
+                    "value": "Message: {}\n DisplayMessage: {}".format(event["EventMessage"],
+                                                                       event["EventDisplayMessage"]),
+                    "short": False
+                },
+                {
+                    "title": "Job Info",
+                    "value": "NodeName: {}, JobID: {}, TaskGroup: {}, JobType: {}".format(event["NodeName"],
+                                                                                          event["JobID"],
+                                                                                          event["TaskGroup"],
+                                                                                          event["JobType"]),
+                    "short": True
+                },
+                {
+                    "title": "Event Details",
+                    "value": event_details,
+                    "short": True
+                }
+            ]
+        }]
+    }
+    return json.dumps(message)
+
+
+def post_message_to_slack(hook_url, message):
+    headers = {"Content-type": "application/json"}
+    connection = http.client.HTTPSConnection("hooks.slack.com")
+    connection.request("POST", hook_url.replace("https://hooks.slack.com", ""), message, headers)
+    if connection.getresponse().read().decode() == "ok":
+        return True
+    else:
+        return False
 
 
 def main():
@@ -97,10 +134,11 @@ def main():
             raise SystemExit("Can't get info from Nomad. Nomad unavailable.")
         for event in events:
             print("Event to Send:", event)
-            slack_result = post_message_to_slack(os.getenv("SLACK_TOKEN"), os.getenv("SLACK_CHANNEL"), event,
-                                                 os.getenv("SLACK_ICON_URL", ""),
-                                                 os.getenv("SLACK_USERNAME", "NomadEventBot"))
-            if slack_result["ok"]:
+            try:
+                slack_result = post_message_to_slack(os.getenv("SLACK_WEB_HOOK_URL"), format_event_to_slack_message(event))
+            except Exception as err:
+                raise SystemExit("Can't send message to Slack. Slack web hook url wrong.")
+            if slack_result:
                 sent_events.append(event)
                 if use_consul and len(sent_events) != 0:
                     try:
