@@ -1,5 +1,7 @@
 [![Docker Publish Status](https://github.com/fivexl/nomad-events-to-slack/workflows/docker-publish/badge.svg)](https://github.com/fivexl/nomad-events-to-slack/actions)
 
+[![FivexL](https://releases.fivexl.io/fivexlbannergit.jpg)](https://fivexl.io/)
+
 # Hashicorp Nomad events to Slack
 Get nomad's allocations. Retrieve events from the tasks inside allocations. Post events to Slack channel as a Slack bot using incoming web hooks.  
 It is possible to filter events by node name, jobid, event type and event message.
@@ -40,6 +42,7 @@ job "events-to-slack" {
             }
             config {
                 image = "ghcr.io/fivexl/nomad-events-to-slack:latest"
+                network_mode = "host"
             }
         }
     }

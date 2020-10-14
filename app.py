@@ -27,10 +27,14 @@ def consul_put(c_consul, key, value):
 
 def consul_get(c_consul, key):
     index, data = c_consul.kv.get(key)
+    logger.debug("Get index: {} and data {} from consul".format(index, data))
     if data:
         if data["Value"]:
             logger.debug("Get key: {} and value: {} from consul".format(key, data["Value"]))
             return json.loads(base64.urlsafe_b64decode(data["Value"]).decode('utf-8'))
+        else:
+            c_consul.kv.put(key, [])
+            return []
     else:
         c_consul.kv.put(key, [])
         return []
@@ -180,7 +184,8 @@ def main():
                     except Exception:
                         logger.error("Can't put value to Consul. Consul unavailable.")
                         raise SystemExit()
-        logger.info("Send {} events. Wait 30 sec and check again".format(len(sent_events)))
+        if len(sent_events):
+            logger.info("Send {} events. Wait 30 sec and check again".format(len(sent_events)))
         time.sleep(30)
 
 
