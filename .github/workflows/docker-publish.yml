@@ -1,4 +1,4 @@
-name: 'Docker Image Publish'
+name: 'docker-publish'
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   docker:
-    name: 'Docker Build and Push'
+    name: 'docker-build-and-push'
     runs-on: ubuntu-latest
     steps:
       # Checkout the repository to the GitHub Actions runner
