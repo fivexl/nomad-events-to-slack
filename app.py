@@ -13,11 +13,8 @@ logger.setLevel(logging.INFO)
 logging.basicConfig(level=logging.INFO)
 
 
-def clear_input_list(in_list):
-    while "" in in_list:
-        in_list.remove("")
-    while "None" in in_list:
-        in_list.remove("None")
+def clear_input_list(_list):
+    return [s for s in _list if s not in ["", "None"]]
 
 
 def consul_put(c_consul, key, value):
@@ -28,16 +25,12 @@ def consul_put(c_consul, key, value):
 def consul_get(c_consul, key):
     index, data = c_consul.kv.get(key)
     logger.debug("Get index: {} and data {} from consul".format(index, data))
-    if data:
-        if data["Value"]:
-            logger.debug("Get key: {} and value: {} from consul".format(key, data["Value"]))
-            return json.loads(base64.urlsafe_b64decode(data["Value"]).decode('utf-8'))
-        else:
-            c_consul.kv.put(key, [])
-            return []
-    else:
-        c_consul.kv.put(key, [])
-        return []
+    if data and data["Value"]:
+        logger.debug("Get key: {} and value: {} from consul".format(key, data["Value"]))
+        return json.loads(base64.urlsafe_b64decode(data["Value"]).decode('utf-8'))
+    
+    c_consul.kv.put(key, [])
+    return []
 
 
 def get_alloc_events(c_nomad, sent_events_list, node_name_list, job_id_list, event_types_list, event_message_filters):
