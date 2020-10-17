@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 def clear_input_list(_list):
-    return [s for s in _list if s not in ["", "None"]]
+    _list = [s for s in _list if s not in ["", "None"]]
 
 
 def consul_put(c_consul, key, value):
