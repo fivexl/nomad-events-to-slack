@@ -29,7 +29,9 @@ jobs:
       - name: Prepare
         id: prep
         run: |
-          DOCKER_IMAGE=ghcr.io/fivexl/nomad-events-to-slack
+          REG=ghcr.io
+          IMAGE=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')
+          DOCKER_IMAGE=${REG}/${IMAGE}
           VERSION=nool
           if [ "${{ github.event_name }}" = "schedule" ]; then
             VERSION=nightly
