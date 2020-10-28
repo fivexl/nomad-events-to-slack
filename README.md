@@ -13,16 +13,16 @@ Configuration is done via env variables
 
 * `SLACK_WEB_HOOK_URL` - Slack web hook URL where to send events. Mandatory parameter.
 * `NOMAD_EVENTS_TO_SLACK_DEBUG` -  Enable debug print outs to the log. `false` if not defined. Set to `true` to enable.
-* `NODE_NAMES` - Filter nomad's event by node name. Able to use `${node.unique.name}` nomad's var. Many values separated by comma.
-* `JOB_IDS` - Filter nomad's event by jobid (job name). Many values separated by comma.
-* `EVENT_TYPES` - Filter nomad's event by event type. Many values separated by comma. Full list of events types: https://www.nomadproject.io/api-docs/allocations#events
-* `EVENT_MESSAGE_FILTERS` - Filter nomad's event by event message. Many values separated by comma.
-* `USE_CONSUL` - Use consul kv for save events that already sent to Slack. `false` if not defined. Set to `true` to enable.
-* `CONSUL_KEY` - Set the consul kv key which used for save events. `nomad/nomad-events-to-slack` is default.
+* `NODE_NAMES` - Filter Nomad's event by node name. Able to use `${node.unique.name}` Nomad's var. Many values separated by comma.
+* `JOB_IDS` - Filter Nomad's event by job id (job name). Many values separated by comma.
+* `EVENT_TYPES` - Filter Nomad's event by event type. Many values separated by comma. Full list of events types: https://www.nomadproject.io/api-docs/allocations#events
+* `EVENT_MESSAGE_FILTERS` - Filter Nomad's event by event message. Many values separated by comma.
+* `USE_CONSUL` - Use Consul kv to save events that already sent to Slack. `false` if not defined. Set to `true` to enable.
+* `CONSUL_KEY` - Set the Consul kv key which used to save events. `nomad/nomad-events-to-slack` is default.
 
 # Deployment
 Application can be launched using docker  
-For example inside a nomad. Don't forget to change Slack web hook url.
+For example inside a Nomad. Don't forget to change Slack web hook url.
 ```hcl
 job "events-to-slack" {
     datacenters = ["dc1"]
