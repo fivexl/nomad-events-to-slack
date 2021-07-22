@@ -83,7 +83,7 @@ def format_event_to_slack_message(event):
         event_details += key + ": " + value + " "
     message = {
         "attachments": [{
-            "color": "#36a64f",
+            "color": os.getenv("EVENTS_COLOR", "#36a64f"),
             "footer": "Time: {}, AllocationID: {}".format(event["Time"], event["AllocationID"]),
             "fields": [
                 {
