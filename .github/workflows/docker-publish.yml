@@ -63,7 +63,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.TK_REG }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Build image and push to registry
       - name: Build and push
