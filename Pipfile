@@ -10,7 +10,7 @@ python-nomad = "==1.2.1"
 python-consul2 = "==0.1.4"
 idna = "==2.10"
 chardet = "==3.0.4"
-certifi = "==2020.6.20"
+certifi = "==2022.12.7"
 urllib3 = "==1.26.5"
 
 [requires]
